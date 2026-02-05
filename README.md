@@ -8,82 +8,96 @@
 |------|------|------|--------|
 | ✅ | `main.go` | 基础 ChatModel 调用 | ⭐ |
 | ✅ | `step2_agent_with_tools.go` | Agent + Tool (计算器) | ⭐⭐ |
-| 🔄 | `step3_react_agent.go` | ReAct Agent (天气+时间工具) | ⭐⭐⭐ |
-| ⏳ | `step4_multi_agent.go` | Multi Agent | ⭐⭐⭐⭐ |
+| ✅ | `step3_react_agent.go` | ReAct Agent (天气+时间工具) | ⭐⭐⭐ |
+| 🔄 | `step4_multi_agent_parallel.go` | Multi-Agent 并行协作 | ⭐⭐⭐⭐ |
 
 ## 运行示例
 
-### Step 1: 基础 ChatModel
+### Step 4: Multi-Agent 并行协作
 ```bash
 export MINIMAX_API_KEY="sk-cp-your-api-key"
-go run main.go
+go run step4_multi_agent_parallel.go
 ```
 
-### Step 2: Agent + Tools
-```bash
-export MINIMAX_API_KEY="sk-cp-your-api-key"
-go run step2_agent_with_tools.go
+## 架构设计
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              Main Orchestrator (项目经理)                   │
+│  • 接收任务 → 并行委派 → 汇总汇报                          │
+└────────────────────────────┬────────────────────────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+       ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+       │  Architect  │ │   Backend   │ │  Frontend  │
+       │   Agent     │ │   Agent     │ │   Agent     │
+       │  (架构设计)   │ │  (后端开发)  │ │  (前端开发)  │
+       └─────────────┘ └─────────────┘ └─────────────┘
+              │              │              │
+              └──────────────┼──────────────┘
+                             │
+                             ▼
+              ┌─────────────────────────┐
+              │   Result Aggregator     │
+              │     (结果汇总器)          │
+              │  • 汇总各Agent结果        │
+              │  • 生成最终报告           │
+              └─────────────────────────┘
 ```
 
-### Step 3: ReAct Agent
-```bash
-export MINIMAX_API_KEY="sk-cp-your-api-key"
-go run step3_react_agent.go
-```
+## 核心功能
 
-## 核心概念
-
-### ReAct Agent (Step 3)
-ReAct = Reasoning + Acting，通过思考-行动-观察循环解决复杂问题：
-
+### 并行任务执行
 ```go
-// 创建 ReAct Agent
-agent, err := react.NewAgent(ctx, &react.AgentConfig{
-    ToolCallingModel: chatModel,
-    ToolsConfig: compose.ToolsNodeConfig{
-        InvokableTools: []tool.InvokableTool{weatherTool, timeTool},
-    },
-    MaxStep: 10,           // 最大步数
-    MessageModifier: func(ctx context.Context, input []*schema.Message) []*schema.Message {
-        // 修改传入模型的消息
-        return append([]*schema.Message{schema.SystemMessage("你是一个智能助手")}, input...)
-    },
-})
-
-// 调用 Agent
-resp, err := agent.Generate(ctx, []*schema.Message{
-    schema.UserMessage("北京今天的天气怎么样？"),
-})
-
-// 流式输出
-stream, _ := agent.Stream(ctx, messages)
-for {
-    msg, _ := stream.Recv()
-    fmt.Print(msg.Content)
+// 并行执行多个Agent任务
+tasks := []map[string]string{
+    {"name": "系统架构设计", "agent_type": "architect", "description": "设计用户系统架构"},
+    {"name": "后端API开发", "agent_type": "backend_dev", "description": "实现登录API"},
+    {"name": "前端页面开发", "agent_type": "frontend_dev", "description": "实现登录页面"},
+    {"name": "测试用例编写", "agent_type": "test_dev", "description": "编写登录测试"},
 }
+
+// 使用工具并行执行
+result := execute_parallel_tasks(tasks)
 ```
 
-### 核心组件
-
-| 组件 | 说明 |
-|------|------|
-| `react.NewAgent()` | 创建 ReAct Agent |
-| `compose.ToolsNodeConfig` | 工具配置 |
-| `MaxStep` | 最大运行步数 |
-| `MessageModifier` | 消息修改器 |
-| `agent.Generate()` | 非流式调用 |
-| `agent.Stream()` | 流式输出 |
+### 报告生成
+```go
+// 生成最终报告
+report := generate_report(
+    task_name: "用户登录模块",
+    work_summary: "已完成前后端开发和测试",
+)
+```
 
 ## 目录结构
 
 ```
 eino-minimax-demo/
-├── main.go                   # Step 1: 基础 ChatModel
-├── step2_agent_with_tools.go # Step 2: Agent + Tools (计算器)
-├── step3_react_agent.go      # Step 3: ReAct Agent (天气+时间)
-├── step4_multi_agent.go      # Step 4: Multi Agent (待实现)
+├── main.go                      # Step 1: 基础 ChatModel
+├── step2_agent_with_tools.go   # Step 2: Agent + Tools (计算器)
+├── step3_react_agent.go        # Step 3: ReAct Agent (天气+时间)
+├── step4_multi_agent_parallel.go # Step 4: Multi-Agent 并行协作
+├── python-env/                 # Python 虚拟环境 (uv 管理)
+│   └── data_agent.py          # Python 数据处理子代理
 ├── go.mod
 └── README.md
+```
+
+## Python 子代理 (uv 管理)
+
+```bash
+# 创建 uv 环境
+cd eino-minimax-demo
+uv venv python-env
+source python-env/bin/activate
+
+# 添加依赖
+uv add polars pandas openpyxl
+
+# 运行数据处理脚本
+uv run python data_agent.py
 ```
 
 ## 依赖
